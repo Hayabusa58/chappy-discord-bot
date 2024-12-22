@@ -41,7 +41,7 @@ func main() {
 		}
 		// メッセージが送られたチャンネルが指定されたものか判定する
 		if m.ChannelID == cid {
-			fmt.Println(bot.CompletionParams.Messages.Value)
+			// fmt.Println(bot.CompletionParams.Messages.Value)
 			bot.CompletionParams.Messages.Value = append(bot.CompletionParams.Messages.Value, openai.UserMessage(m.Content))
 			// 入力中... 表示を開始するゴルーチン
 			go func() {

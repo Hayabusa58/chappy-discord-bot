@@ -10,6 +10,7 @@ import (
 type DiscordBot struct {
 	Session          *discordgo.Session
 	CompletionParams openai.ChatCompletionNewParams
+	StopTyping       chan bool
 }
 
 func NewDiscordBot(tk string, initmsg string) *DiscordBot {
@@ -21,11 +22,13 @@ func NewDiscordBot(tk string, initmsg string) *DiscordBot {
 		Seed:  openai.Int(1),
 		Model: openai.F(openai.ChatModelGPT4),
 	}
+	ch := make(chan bool)
 	if err != nil {
 		fmt.Println(err)
 	}
 	return &DiscordBot{
 		Session:          session,
 		CompletionParams: parms,
+		StopTyping:       ch,
 	}
 }

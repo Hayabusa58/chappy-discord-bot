@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"time"
@@ -25,7 +26,17 @@ func main() {
 	discordtk := os.Getenv("DISCORD_BOT_TOKEN")
 	// 初期プロンプトを自由に設定できるようにはしている
 	initprompt := ""
-	bot := NewDiscordBot(discordtk, initprompt)
+	// チャットモデルの設定
+	model := os.Getenv("OPENAI_MODEL")
+
+	if openaitk == "" || model == "" {
+		log.Fatal("Error: OpenAI token or OpenAI model not set")
+	}
+
+	if discordtk == "" {
+		log.Fatal("Error: Discord token not set")
+	}
+	bot := NewDiscordBot(discordtk, model, initprompt)
 
 	bot.Session.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
 		fmt.Println("Logged in as %s", r.User.String())

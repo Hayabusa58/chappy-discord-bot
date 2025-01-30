@@ -9,15 +9,10 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/joho/godotenv"
 	"github.com/openai/openai-go"
 )
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
-		fmt.Println(err)
-	}
 
 	openaitk := os.Getenv("OPENAI_TOKEN")
 	openaisv := NewOpenAiService(openaitk)
@@ -84,17 +79,13 @@ func main() {
 		}
 	})
 
-	if err != nil {
-		fmt.Println(err)
-	}
-
 	bot.Session.Open()
 
 	sigch := make(chan os.Signal, 1)
 	signal.Notify(sigch, os.Interrupt)
 	<-sigch
 
-	err = bot.Session.Close()
+	err := bot.Session.Close()
 	if err != nil {
 		fmt.Println(err)
 	}

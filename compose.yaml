@@ -1,0 +1,6 @@
+services:
+  chappy-discord-bot:
+    image: chappy-discord-bot
+    restart: always
+    env_file:
+      - ".env"

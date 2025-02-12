@@ -48,6 +48,11 @@ func main() {
 		// メッセージが送られたチャンネルが指定されたものか判定する
 		if m.ChannelID == cid {
 			// fmt.Println(bot.CompletionParams.Messages.Value)
+			// メッセージが空であれば return
+			if m.Content == "" {
+				fmt.Errorf("Error: User message has no content.")
+				return
+			}
 			bot.CompletionParams.Messages.Value = append(bot.CompletionParams.Messages.Value, openai.UserMessage(m.Content))
 			// 入力中... 表示を開始するゴルーチン
 			go func() {
@@ -70,7 +75,9 @@ func main() {
 			completion, err := openaisv.Client.Chat.Completions.New(context.TODO(), bot.CompletionParams)
 
 			if err != nil {
-				fmt.Println(err)
+				fmt.Errorf("Error: %w", err)
+				s.ChannelMessageSend(m.ChannelID, "Error: Something error happend. Try contact to administrator. \n 何らかのエラーが発生したようです。管理者にご連絡ください。")
+				return
 			}
 			// fmt.Println(completion.Choices[0].Message.Content)
 			s.ChannelMessageSend(m.ChannelID, completion.Choices[0].Message.Content)

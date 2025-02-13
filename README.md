@@ -60,16 +60,14 @@
 
 ### Docker
 ```
-$ mv .env.sample .env
-
-$ vi .env
-# OPENAI_TOKEN, OPENAI_MODEL, DISCORD_BOT_TOKEN, DISCORD_CHANNEL_ID を入力する
-
 $ docker build -t chappy-discord-bot .
 # コンテナのビルド
+
+$ mv compose.yaml.sample compose.yaml
+$ vi compose.yaml
+# OPENAI_TOKEN, OPENAI_MODEL, DISCORD_BOT_TOKEN, DISCORD_CHANNEL_ID を入力する
 
 $ docker run -d --rm --name chappy-discord-bot chappy-discord-bot
 # コンテナの起動
 ```
-動作は保証しませんが、コンテナのリビルドと再起動を行うスクリプトが run.sh です。
-
+デバッグ時には `go run . -debug`と実行することで、直接 .env ファイルを読み出すことができます。

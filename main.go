@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -36,6 +35,10 @@ func main() {
 	initprompt := ""
 	// チャットモデルの設定
 	model := os.Getenv("OPENAI_MODEL")
+	// 投稿するチャンネルID
+	cid := os.Getenv("DISCORD_CHANNEL_ID")
+	log.Println("Info: Bot starting...")
+	log.Printf("Info: OpenAI model is %s", model)
 
 	if openaitk == "" || model == "" {
 		log.Fatal("Error: OpenAI token or OpenAI model not set")
@@ -50,11 +53,11 @@ func main() {
 	bot := NewDiscordBot(discordtk, model, initprompt)
 
 	bot.Session.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
-		log.Printf("Logged in as %s", r.User.String())
+		log.Printf("Info: Bot logged in as %s", r.User.String())
+		s.ChannelMessageSend(cid, "Botがログインしました。")
 	})
 
 	bot.Session.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
-		cid := os.Getenv("DISCORD_CHANNEL_ID")
 		// Bot 自身のメッセージの場合
 		if m.Author.ID == s.State.User.ID {
 			// 入力中... 表示を停止する
@@ -110,8 +113,9 @@ func main() {
 	<-sigch
 
 	err := bot.Session.Close()
+	log.Println("Info: Bot stopping...")
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("Error: Something went wrong when session closing: %f", err)
 	}
 
 }

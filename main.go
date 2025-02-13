@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/joho/godotenv"
 	"github.com/openai/openai-go"
 )
 
@@ -38,11 +40,14 @@ func main() {
 
 	if openaitk == "" || model == "" {
 		log.Fatal("Error: OpenAI token or OpenAI model not set")
+		return
 	}
 
 	if discordtk == "" {
 		log.Fatal("Error: Discord token not set")
+		return
 	}
+	openaisv := NewOpenAiService(openaitk)
 	bot := NewDiscordBot(discordtk, model, initprompt)
 
 	bot.Session.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
@@ -71,6 +76,7 @@ func main() {
 				s.ChannelTyping(cid)
 				t := time.NewTicker(10 * time.Second)
 				defer t.Stop()
+				timeout := time.After(1 * time.Minute)
 				for {
 					select {
 					case <-t.C:
@@ -78,7 +84,8 @@ func main() {
 						s.ChannelTyping(cid)
 					case <-bot.StopTyping:
 						// fmt.Println("Stopping")
-						t.Stop()
+						return
+					case <-timeout:
 						return
 					}
 				}
@@ -88,7 +95,7 @@ func main() {
 
 			if err != nil {
 				fmt.Errorf("Error: %w", err)
-				s.ChannelMessageSend(m.ChannelID, "Error: Something error happend. Try contact to administrator. \n 何らかのエラーが発生したようです。管理者にご連絡ください。")
+				s.ChannelMessageSend(m.ChannelID, "Error: Error happend. Try contact to administrator. \n 何らかのエラーが発生したようです。管理者にご連絡ください。")
 				return
 			}
 			// fmt.Println(completion.Choices[0].Message.Content)

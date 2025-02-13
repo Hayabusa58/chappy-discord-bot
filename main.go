@@ -13,6 +13,18 @@ import (
 )
 
 func main() {
+	var (
+		debug = flag.Bool("debug", false, "Debug enable")
+	)
+	flag.Parse()
+
+	if *debug == true {
+		err := godotenv.Load()
+		if err != nil {
+			log.Fatal("Error: (debug) Can't load enviroment variables.")
+			return
+		}
+	}
 
 	openaitk := os.Getenv("OPENAI_TOKEN")
 	openaisv := NewOpenAiService(openaitk)

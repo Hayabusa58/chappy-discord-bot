@@ -13,9 +13,12 @@
     - Discord bot token 
     - OpenAI API token
     - Bot を動作させたいチャンネルの Chennel ID
+- Google Gemini API を使用する場合は、.env の`OPENAI_BASEURL`にOpenAI互換のGemini APIのエンドポイントを追加してください。
 
 ### サポートされているモデル
 .env の `OPENAI_MODEL` に設定可能な値は以下の通り
+
+OpenAI API
 | 値                                  |
 |-------------------------------------------------|
 | o1                                              |
@@ -56,18 +59,27 @@
 | gpt-3.5-turbo-0125                              |
 | gpt-3.5-turbo-16k-0613                          |
 
-
+Google Geimini
+| 値                                              |
+|-------------------------------------------------|
+| gemini-2.0-flash                                |
+| gemini-2.5-pro                                  |
+| gemini-2.5-flash                                |
 
 ### Docker
 ```
-$ docker build -t chappy-discord-bot .
 # コンテナのビルド
+$ docker build -t chappy-discord-bot .
 
+# OPENAI_TOKEN, OPENAI_MODEL, DISCORD_BOT_TOKEN, DISCORD_CHANNEL_ID を入力する
 $ mv compose.yaml.sample compose.yaml
 $ vi compose.yaml
-# OPENAI_TOKEN, OPENAI_MODEL, DISCORD_BOT_TOKEN, DISCORD_CHANNEL_ID を入力する
 
-$ docker run -d --rm --name chappy-discord-bot chappy-discord-bot
+# Docker compose でコンテナ起動
+$ docker compose up -d
+
 # コンテナの起動
+$ docker run -d --rm --name chappy-discord-bot chappy-discord-bot
+
 ```
 デバッグ時には `go run . -debug`と実行することで、直接 .env ファイルを読み出すことができます。

@@ -6,13 +6,15 @@ import (
 )
 
 type OpenAiService struct {
-	Client *openai.Client
+	Client  *openai.Client
+	BaseUrl string
 }
 
-func NewOpenAiService(tk string) *OpenAiService {
-	cl := openai.NewClient(option.WithAPIKey(tk))
+func NewOpenAiService(tk string, url string) *OpenAiService {
+	cl := openai.NewClient(option.WithAPIKey(tk), option.WithBaseURL(url))
 
 	return &OpenAiService{
-		Client: cl,
+		Client:  cl,
+		BaseUrl: url,
 	}
 }

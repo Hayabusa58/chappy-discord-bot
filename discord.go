@@ -20,7 +20,8 @@ func NewDiscordBot(tk string, model string, initmsg string) *DiscordBot {
 		Messages: openai.F([]openai.ChatCompletionMessageParamUnion{
 			openai.UserMessage(initmsg),
 		}),
-		Seed:  openai.Int(1),
+		// Geminiのサポートのため一時的にSeedを無効化
+		// Seed:  openai.Int(1),
 		Model: openai.F(model),
 	}
 	ch := make(chan bool)

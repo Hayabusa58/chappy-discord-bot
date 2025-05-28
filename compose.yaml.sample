@@ -5,5 +5,7 @@ services:
     environment:
       OPENAI_TOKEN: 
       OPENAI_MODEL: 
+      # If you want use Gemini API, enable it
+      #OPENAI_BASEURL: https://generativelanguage.googleapis.com/v1beta/openai/
       DISCORD_BOT_TOKEN: 
       DISCORD_CHANNEL_ID: 

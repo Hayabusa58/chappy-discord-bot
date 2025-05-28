@@ -33,6 +33,12 @@ func main() {
 	model := os.Getenv("OPENAI_MODEL")
 	// 投稿するチャンネルID
 	cid := os.Getenv("DISCORD_CHANNEL_ID")
+	// API のエンドポイントURL
+	baseUrl := os.Getenv("OPENAI_BASEURL")
+	if baseUrl == "" {
+		baseUrl = "https://api.openai.com/v1/"
+	}
+	log.Printf("Info: API baseurl is %s", baseUrl)
 	log.Println("Info: Bot starting...")
 	log.Printf("Info: OpenAI model is %s", model)
 
@@ -45,7 +51,7 @@ func main() {
 		log.Fatal("Error: Discord token not set")
 		return
 	}
-	openaisv := NewOpenAiService(openaitk)
+	openaisv := NewOpenAiService(openaitk, baseUrl)
 	bot := NewDiscordBot(discordtk, model, initprompt)
 
 	bot.Session.AddHandler(readyHandler(cid))

@@ -54,7 +54,7 @@ func main() {
 	openaisv := NewOpenAiService(openaitk, baseUrl)
 	bot := NewDiscordBot(discordtk, model, initprompt)
 
-	bot.Session.AddHandler(readyHandler(cid))
+	bot.Session.AddHandler(readyHandler(bot, openaisv, cid))
 	bot.Session.AddHandler(messageCreateHandler(bot, cid, openaisv))
 
 	bot.Session.Open()

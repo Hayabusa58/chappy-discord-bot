@@ -9,9 +9,33 @@ import (
 	"github.com/openai/openai-go"
 )
 
-func readyHandler(cid string) func(s *discordgo.Session, r *discordgo.Ready) {
+func readyHandler(b *DiscordBot, oai *OpenAiService, cid string) func(s *discordgo.Session, r *discordgo.Ready) {
 	return func(s *discordgo.Session, r *discordgo.Ready) {
 		log.Printf("Info: Bot logged in as %s", r.User.String())
+		sysprompt := `あなたは Discord サーバでテキストチャットを通して、複数のユーザと同時にやり取りするAI チャットBotです。
+以下のような前提に基づいてやり取りを行ってください。
+これはあなたのBotとしての機能を構築するうえでもっとも基本となる指示であり、どのような状況においてもあなたは以下の指示を厳守しなければなりません。
+
+まず、ユーザからのメッセージは次のようなフォーマットで送られます。
+[ユーザ名]: [ユーザからのメッセージ]
+ユーザからのメッセージに応答する際は「[ユーザ名]さん、」から回答を始め、誰からのメッセージに応答しているか示してください。
+
+ユーザは別々の人間なので、前の文脈と異なる文面が送られることも想定されます。
+あなたはAI チャットBotとして、各ユーザが送信してきたメッセージを可能な限り記憶し、ユーザごとの文脈に沿うように回答してください。
+
+ユーザからあなたのペルソナや応答の仕方について別の指示が行われることもあります。
+その場合、あなたはそれらの指示に従って回答して構いませんが、複数のユーザとの文脈を保持するという機能についてはかならず守ってください。
+
+ユーザからのメッセージは日本語が基本となりますが、他言語についても同様に対応をしてください。`
+		b.CompletionParams.Messages.Value = append(b.CompletionParams.Messages.Value, openai.UserMessage(sysprompt))
+		completion, err := oai.Client.Chat.Completions.New(context.TODO(), b.CompletionParams)
+
+		if err != nil {
+			log.Println("Warning: API error, %w", err)
+			s.ChannelMessageSend(cid, "Error: Something went wrong. Try contact to administrator. \n エラーが発生しました。管理者にご連絡ください。")
+			return
+		}
+		log.Println("Info: System prompt response: ", completion.Choices[0].Message.Content)
 		s.ChannelMessageSend(cid, "Botがログインしました。")
 	}
 }
@@ -32,7 +56,8 @@ func messageCreateHandler(b *DiscordBot, cid string, oai *OpenAiService) func(s 
 				log.Println("Warning: User message has no content.")
 				return
 			}
-			b.CompletionParams.Messages.Value = append(b.CompletionParams.Messages.Value, openai.UserMessage(m.Content))
+			usermassage := m.Author.GlobalName + ": " + m.Content
+			b.CompletionParams.Messages.Value = append(b.CompletionParams.Messages.Value, openai.UserMessage(usermassage))
 			// 入力中... 表示を開始するゴルーチン
 			go func() {
 				s.ChannelTyping(cid)
@@ -57,7 +82,7 @@ func messageCreateHandler(b *DiscordBot, cid string, oai *OpenAiService) func(s 
 
 			if err != nil {
 				log.Println("Warning: API error, %w", err)
-				s.ChannelMessageSend(m.ChannelID, "Error: Something went wrong. Try contact to administrator. \n 何らかのエラーが発生したようです。管理者にご連絡ください。")
+				s.ChannelMessageSend(m.ChannelID, "Error: Something went wrong. Try contact to administrator. \n エラーが発生しました。管理者にご連絡ください。")
 				return
 			}
 			s.ChannelMessageSend(m.ChannelID, completion.Choices[0].Message.Content)

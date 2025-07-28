@@ -1,28 +1,12 @@
 package main
 
 import (
-	"flag"
 	"log"
 	"os"
 	"os/signal"
-
-	"github.com/joho/godotenv"
 )
 
 func main() {
-	var (
-		debug = flag.Bool("debug", false, "Debug enable")
-	)
-	flag.Parse()
-
-	if *debug {
-		err := godotenv.Load()
-		if err != nil {
-			log.Fatal("Error: (debug) Can't load enviroment variables.")
-			return
-		}
-	}
-
 	openaitk := os.Getenv("OPENAI_TOKEN")
 
 	// Bot の作成
@@ -35,6 +19,7 @@ func main() {
 	cid := os.Getenv("DISCORD_CHANNEL_ID")
 	// API のエンドポイントURL
 	baseUrl := os.Getenv("OPENAI_BASEURL")
+	// 設定されていなければ openai のURLを使用する
 	if baseUrl == "" {
 		baseUrl = "https://api.openai.com/v1/"
 	}

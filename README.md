@@ -9,6 +9,7 @@
 
 ### 準備
 - 事前に適切な権限を与えた Discord Botを作成し、動作させたいサーバに招待しておく
+- Docker が動作する環境を用意する
 - 以下の情報を取得する
     - Discord bot token 
     - OpenAI API token
@@ -71,9 +72,10 @@ Google Geimini
 # コンテナのビルド
 $ docker build -t chappy-discord-bot .
 
-# OPENAI_TOKEN, OPENAI_MODEL, DISCORD_BOT_TOKEN, DISCORD_CHANNEL_ID を入力する
-$ mv compose.yaml.sample compose.yaml
-$ vi compose.yaml
+# .env にOPENAI_TOKEN, OPENAI_MODEL, DISCORD_BOT_TOKEN, DISCORD_CHANNEL_ID を入力する
+# Google Gemini を使用する場合、.env と compose.yaml の OPENAI_BASEURL のコメントアウトを外してください。
+$ mv .env.sample .env
+$ vi .env
 
 # Docker compose でコンテナ起動
 $ docker compose up -d
@@ -82,4 +84,3 @@ $ docker compose up -d
 $ docker run -d --rm --name chappy-discord-bot chappy-discord-bot
 
 ```
-デバッグ時には `go run . -debug`と実行することで、直接 .env ファイルを読み出すことができます。

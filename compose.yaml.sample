@@ -3,9 +3,9 @@ services:
     image: chappy-discord-bot
     restart: always
     environment:
-      OPENAI_TOKEN: 
-      OPENAI_MODEL: 
       # If you want use Gemini API, enable it
-      #OPENAI_BASEURL: https://generativelanguage.googleapis.com/v1beta/openai/
-      DISCORD_BOT_TOKEN: 
-      DISCORD_CHANNEL_ID: 
+      # OPENAI_BASEURL: $OPENAI_BASEURL
+      OPENAI_MODEL: $OPENAI_MODEL
+      OPENAI_TOKEN: $OPENAI_TOKEN
+      DISCORD_BOT_TOKEN: $DISCORD_BOT_TOKEN
+      DISCORD_CHANNEL_ID: $DISCORD_CHANNEL_ID

@@ -72,7 +72,7 @@ Google Geimini
 # コンテナのビルド
 $ docker build -t chappy-discord-bot .
 
-# .env にOPENAI_TOKEN, OPENAI_MODEL, DISCORD_BOT_TOKEN, DISCORD_CHANNEL_ID を入力する
+# .env に OPENAI_TOKEN, OPENAI_MODEL, DISCORD_BOT_TOKEN, DISCORD_CHANNEL_ID を入力する
 # Google Gemini を使用する場合、.env と compose.yaml の OPENAI_BASEURL のコメントアウトを外してください。
 $ mv .env.sample .env
 $ vi .env

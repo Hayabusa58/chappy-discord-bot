@@ -12,9 +12,10 @@ type DiscordBot struct {
 	Model            string
 	CompletionParams openai.ChatCompletionNewParams
 	StopTyping       chan bool
+	History          *HistoryManager
 }
 
-func NewDiscordBot(tk string, model string, initmsg string) *DiscordBot {
+func NewDiscordBot(tk string, model string, initmsg string, hm *HistoryManager) *DiscordBot {
 	session, err := discordgo.New("Bot " + tk)
 	parms := openai.ChatCompletionNewParams{
 		Messages: openai.F([]openai.ChatCompletionMessageParamUnion{
@@ -33,5 +34,6 @@ func NewDiscordBot(tk string, model string, initmsg string) *DiscordBot {
 		Model:            model,
 		CompletionParams: parms,
 		StopTyping:       ch,
+		History:          hm,
 	}
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -9,10 +10,7 @@ import (
 	"github.com/openai/openai-go"
 )
 
-func readyHandler(b *DiscordBot, oai *OpenAiService, cid string) func(s *discordgo.Session, r *discordgo.Ready) {
-	return func(s *discordgo.Session, r *discordgo.Ready) {
-		log.Printf("Info: Bot logged in as %s", r.User.String())
-		sysprompt := `あなたは Discord サーバでテキストチャットを通して、複数のユーザと同時にやり取りするAI チャットBotです。
+var sysprompt = `あなたは Discord サーバでテキストチャットを通して、複数のユーザと同時にやり取りするAI チャットBotです。
 以下のような前提に基づいてやり取りを行ってください。
 これはあなたのBotとしての機能を構築するうえでもっとも基本となる指示であり、どのような状況においてもあなたは以下の指示を厳守しなければなりません。
 
@@ -27,15 +25,39 @@ func readyHandler(b *DiscordBot, oai *OpenAiService, cid string) func(s *discord
 その場合、あなたはそれらの指示に従って回答して構いませんが、複数のユーザとの文脈を保持するという機能についてはかならず守ってください。
 
 ユーザからのメッセージは日本語が基本となりますが、他言語についても同様に対応をしてください。`
-		b.CompletionParams.Messages.Value = append(b.CompletionParams.Messages.Value, openai.UserMessage(sysprompt))
-		completion, err := oai.Client.Chat.Completions.New(context.TODO(), b.CompletionParams)
 
-		if err != nil {
-			log.Println("Warning: API error, %w", err)
-			s.ChannelMessageSend(cid, "Error: Something went wrong. Try contact to administrator. \n エラーが発生しました。管理者にご連絡ください。")
-			return
+func readyHandler(b *DiscordBot, oai *OpenAiService, cid string) func(s *discordgo.Session, r *discordgo.Ready) {
+	return func(s *discordgo.Session, r *discordgo.Ready) {
+		log.Printf("Info: Bot logged in as %s", r.User.String())
+
+		// 過去のメッセージ履歴をロード
+		historyMessages := b.History.GetMessages(cid)
+		if historyMessages == nil {
+			// 初回起動時
+			log.Println("Info: No history found. Starting initalize...")
+			b.CompletionParams.Messages.Value = append(b.CompletionParams.Messages.Value, openai.SystemMessage(sysprompt))
+			completion, err := oai.Client.Chat.Completions.New(context.TODO(), b.CompletionParams)
+			log.Println("Info: System prompt response: ", completion.Choices[0].Message.Content)
+			if err != nil {
+				log.Println("Error: An error happend while initalize: %w", err)
+				msg := fmt.Sprintf("⚠エラー: Botの初期化処理中にエラーが発生しました。\ndetail: `%s`", err)
+				s.ChannelMessageSend(cid, msg)
+				return
+			}
+		} else {
+			// 過去の履歴を読み込んで起動
+			log.Println("Info: history.json found. Starting load chat history...")
+			var apiMessages []openai.ChatCompletionMessageParamUnion
+			for _, msg := range historyMessages {
+				if msg.Role == "user" {
+					apiMessages = append(apiMessages, openai.UserMessage(msg.Content))
+				} else {
+					apiMessages = append(apiMessages, openai.AssistantMessage(msg.Content))
+				}
+			}
+			b.CompletionParams.Messages.Value = apiMessages
 		}
-		log.Println("Info: System prompt response: ", completion.Choices[0].Message.Content)
+
 		s.ChannelMessageSend(cid, "Botがログインしました。")
 	}
 }
@@ -57,6 +79,9 @@ func messageCreateHandler(b *DiscordBot, cid string, oai *OpenAiService) func(s 
 				return
 			}
 			usermassage := m.Author.GlobalName + ": " + m.Content
+
+			// メッセージ履歴に追加
+			b.History.AddMessage(cid, "user", usermassage)
 			b.CompletionParams.Messages.Value = append(b.CompletionParams.Messages.Value, openai.UserMessage(usermassage))
 			// 入力中... 表示を開始するゴルーチン
 			go func() {
@@ -82,13 +107,46 @@ func messageCreateHandler(b *DiscordBot, cid string, oai *OpenAiService) func(s 
 
 			if err != nil {
 				log.Println("Warning: API error, %w", err)
-				s.ChannelMessageSend(m.ChannelID, "Error: Something went wrong. Try contact to administrator. \n エラーが発生しました。管理者にご連絡ください。")
+				msg := fmt.Sprintf("⚠エラー: 応答処理中にエラーが発生しました。\ndetail:`%s`", err)
+				s.ChannelMessageSend(m.ChannelID, msg)
 				return
 			}
+			// メッセージ履歴に追加
+			b.History.AddMessage(cid, "assistant", completion.Choices[0].Message.Content)
 			s.ChannelMessageSend(m.ChannelID, completion.Choices[0].Message.Content)
 			b.CompletionParams.Messages.Value = append(b.CompletionParams.Messages.Value, completion.Choices[0].Message)
 
 		}
 	}
 
+}
+
+func forgetCommandHandler(b *DiscordBot) func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	return func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		if i.ApplicationCommandData().Name == "forget" {
+			// 保持している会話履歴のリセット
+			err := b.History.Forget(i.ChannelID)
+			b.CompletionParams.Messages.Value = []openai.ChatCompletionMessageParamUnion{}
+			// システムプロンプトだけ入れ直す
+			b.CompletionParams.Messages.Value = append(b.CompletionParams.Messages.Value, openai.SystemMessage(sysprompt))
+			log.Println("Info: Removing bot history...")
+			if err != nil {
+				msg := fmt.Sprintf("⚠エラー: 記憶消去処理中にエラーが発生しました。\ndetail:`%s`", err)
+				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: msg,
+					},
+				})
+			} else {
+				log.Println("Info: Removing bot history...")
+				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: "チャットボットの記憶をクリアしました。",
+					},
+				})
+			}
+		}
+	}
 }

@@ -28,13 +28,13 @@ type HistoryManager struct {
 	quit       chan struct{}
 }
 
-func NewHistoryManager(historyDir string, days int) *HistoryManager {
+func NewHistoryManager(historyDir string, days int, saveRotateMin int) *HistoryManager {
 	hm := &HistoryManager{
 		Histories:  make(map[string]*ChannelHistory),
 		HistoryDir: historyDir,
 		RotateDays: days,
 		// 1分間隔で保存
-		ticker: time.NewTicker(1 * time.Minute),
+		ticker: time.NewTicker(time.Duration(saveRotateMin) * time.Minute),
 		quit:   make(chan struct{}),
 	}
 	_ = hm.Load() // ファイルがなければ無視

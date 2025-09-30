@@ -38,7 +38,7 @@ func readyHandler(b *DiscordBot, oai *OpenAiService, cid string) func(s *discord
 			b.CompletionParams.Messages.Value = append(b.CompletionParams.Messages.Value, openai.SystemMessage(sysprompt))
 			completion, err := oai.Client.Chat.Completions.New(context.TODO(), b.CompletionParams)
 			if err != nil {
-				log.Println("Error: An error happend while initalize: %w", err)
+				log.Fatalf("Error: An error happend while initalize: %w", err)
 				msg := fmt.Sprintf("⚠エラー: Botの初期化処理中にエラーが発生しました。\ndetail:\n```\n%s```", err)
 				s.ChannelMessageSend(cid, msg)
 				return

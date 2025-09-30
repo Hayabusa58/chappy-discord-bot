@@ -31,7 +31,15 @@ func main() {
 	log.Printf("Info: OpenAI model is %s", model)
 
 	// 記憶の保持期間
-	days, _ := strconv.Atoi(os.Getenv("HISTORY_DAYS"))
+	days, err := strconv.Atoi(os.Getenv("HISTORY_DAYS"))
+	if err != nil {
+		log.Fatal("Error: HISTORY_DAYS is invalid, value: ", days)
+	}
+	// history.json への保存間隔(デフォルト1分)
+	saveRotateMin, err := strconv.Atoi(os.Getenv("SAVE_ROTATE_MIN"))
+	if err != nil {
+		log.Fatal("Error: SAVE_ROTATE_MIN is invalid, value: ", saveRotateMin)
+	}
 	// history.json の保存ディレクトリ
 	historyDir := os.Getenv("HISTORY_DIR")
 	// ディレクトリがなければ作成する
@@ -48,7 +56,7 @@ func main() {
 		log.Fatal("Error: Discord token not set")
 		return
 	}
-	hm := NewHistoryManager(historyDir, days)
+	hm := NewHistoryManager(historyDir, days, saveRotateMin)
 	openaisv := NewOpenAiService(openaitk, baseUrl)
 	bot := NewDiscordBot(discordtk, model, initprompt, hm)
 
@@ -57,7 +65,7 @@ func main() {
 	bot.Session.AddHandler(forgetCommandHandler(bot))
 	bot.Session.Open()
 	// スラッシュコマンドの登録
-	_, err := bot.Session.ApplicationCommandCreate(bot.Session.State.User.ID, "", &discordgo.ApplicationCommand{
+	_, err = bot.Session.ApplicationCommandCreate(bot.Session.State.User.ID, "", &discordgo.ApplicationCommand{
 		Name:        "forget",
 		Description: "このチャンネルにおけるBotの記憶を削除します。",
 	})

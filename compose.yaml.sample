@@ -1,6 +1,6 @@
 services:
   chappy-discord-bot:
-    image: chappy-discord-bot
+    image: ghcr.io/hayabusa58/chappy-discord-bot:main
     restart: always
     environment:
       # If you want use Gemini API, enable it

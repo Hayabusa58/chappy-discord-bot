@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+	"path"
 	"sync"
 	"time"
 )
@@ -20,17 +21,17 @@ type ChannelHistory struct {
 
 type HistoryManager struct {
 	Histories  map[string]*ChannelHistory `json:"histories"`
-	Filename   string
+	HistoryDir string
 	Mutex      sync.Mutex
 	RotateDays int // 保存期間
 	ticker     *time.Ticker
 	quit       chan struct{}
 }
 
-func NewHistoryManager(filename string, days int) *HistoryManager {
+func NewHistoryManager(historyDir string, days int) *HistoryManager {
 	hm := &HistoryManager{
 		Histories:  make(map[string]*ChannelHistory),
-		Filename:   filename,
+		HistoryDir: historyDir,
 		RotateDays: days,
 		// 1分間隔で保存
 		ticker: time.NewTicker(1 * time.Minute),
@@ -86,8 +87,9 @@ func (hm *HistoryManager) cleanup(channelID string) {
 func (hm *HistoryManager) Save() error {
 	hm.Mutex.Lock()
 	defer hm.Mutex.Unlock()
-	f, err := os.Create(hm.Filename)
+	f, err := os.Create(path.Join(hm.HistoryDir, "history.json"))
 	if err != nil {
+		log.Printf("Error: An error happend while saving history.json: %s", err)
 		return err
 	}
 	defer f.Close()
@@ -96,7 +98,7 @@ func (hm *HistoryManager) Save() error {
 }
 
 func (hm *HistoryManager) Load() error {
-	f, err := os.Open(hm.Filename)
+	f, err := os.Open(path.Join(hm.HistoryDir, "history.json"))
 	if err != nil {
 		return err
 	}
@@ -107,6 +109,7 @@ func (hm *HistoryManager) Load() error {
 
 func (hm *HistoryManager) periodicSave() {
 	for {
+		log.Println("Info: Saving history to history.json...")
 		select {
 		case <-hm.ticker.C:
 			_ = hm.Save()
@@ -125,7 +128,7 @@ func (hm *HistoryManager) Forget(channelID string) error {
 	hm.Mutex.Lock()
 	// 現在の history.json をバックアップする
 	t := time.Now().Format("20060102-150405")
-	_ = os.Rename(hm.Filename, "history-"+t+".json")
+	_ = os.Rename(path.Join(hm.HistoryDir, "history.json"), path.Join(hm.HistoryDir, "history-"+t+".json"))
 	// リセット
 	hm.Histories[channelID] = &ChannelHistory{Messages: []ChatMessage{}}
 	hm.Mutex.Unlock()

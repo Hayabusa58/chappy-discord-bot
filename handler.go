@@ -37,12 +37,14 @@ func readyHandler(b *DiscordBot, oai *OpenAiService, cid string) func(s *discord
 			log.Println("Info: No history found. Starting initalize...")
 			b.CompletionParams.Messages.Value = append(b.CompletionParams.Messages.Value, openai.SystemMessage(sysprompt))
 			completion, err := oai.Client.Chat.Completions.New(context.TODO(), b.CompletionParams)
-			log.Println("Info: System prompt response: ", completion.Choices[0].Message.Content)
 			if err != nil {
 				log.Println("Error: An error happend while initalize: %w", err)
-				msg := fmt.Sprintf("⚠エラー: Botの初期化処理中にエラーが発生しました。\ndetail: `%s`", err)
+				msg := fmt.Sprintf("⚠エラー: Botの初期化処理中にエラーが発生しました。\ndetail:\n```\n%s```", err)
 				s.ChannelMessageSend(cid, msg)
 				return
+			} else {
+				log.Println("Info: System prompt response: ", completion.Choices[0].Message.Content)
+
 			}
 		} else {
 			// 過去の履歴を読み込んで起動
@@ -72,7 +74,6 @@ func messageCreateHandler(b *DiscordBot, cid string, oai *OpenAiService) func(s 
 		}
 		// メッセージが送られたチャンネルが指定されたものか判定する
 		if m.ChannelID == cid {
-			// fmt.Println(bot.CompletionParams.Messages.Value)
 			// メッセージが空であれば return
 			if m.Content == "" {
 				log.Println("Warning: User message has no content.")
@@ -107,7 +108,7 @@ func messageCreateHandler(b *DiscordBot, cid string, oai *OpenAiService) func(s 
 
 			if err != nil {
 				log.Println("Warning: API error, %w", err)
-				msg := fmt.Sprintf("⚠エラー: 応答処理中にエラーが発生しました。\ndetail:`%s`", err)
+				msg := fmt.Sprintf("⚠エラー: メッセージの応答処理中にエラーが発生しました。\ndetail:\n```\n%s```", err)
 				s.ChannelMessageSend(m.ChannelID, msg)
 				return
 			}
@@ -131,7 +132,7 @@ func forgetCommandHandler(b *DiscordBot) func(s *discordgo.Session, i *discordgo
 			b.CompletionParams.Messages.Value = append(b.CompletionParams.Messages.Value, openai.SystemMessage(sysprompt))
 			log.Println("Info: Removing bot history...")
 			if err != nil {
-				msg := fmt.Sprintf("⚠エラー: 記憶消去処理中にエラーが発生しました。\ndetail:`%s`", err)
+				msg := fmt.Sprintf("⚠エラー: 記憶消去処理中にエラーが発生しました。\ndetail:\n```\n%s```", err)
 				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,
 					Data: &discordgo.InteractionResponseData{
@@ -143,7 +144,7 @@ func forgetCommandHandler(b *DiscordBot) func(s *discordgo.Session, i *discordgo
 				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,
 					Data: &discordgo.InteractionResponseData{
-						Content: "チャットボットの記憶をクリアしました。",
+						Content: "✅チャットボットの記憶を消去しました。",
 					},
 				})
 			}

@@ -32,7 +32,13 @@ func main() {
 
 	// 記憶の保持期間
 	days, _ := strconv.Atoi(os.Getenv("HISTORY_DAYS"))
-
+	// history.json の保存ディレクトリ
+	historyDir := os.Getenv("HISTORY_DIR")
+	// ディレクトリがなければ作成する
+	if _, err := os.Stat(historyDir); err != nil {
+		log.Printf("Info: History dir not exist, creating...")
+		os.Mkdir(historyDir, os.ModePerm)
+	}
 	if openaitk == "" || model == "" {
 		log.Fatal("Error: OpenAI token or OpenAI model not set")
 		return
@@ -42,7 +48,7 @@ func main() {
 		log.Fatal("Error: Discord token not set")
 		return
 	}
-	hm := NewHistoryManager("history.json", days)
+	hm := NewHistoryManager(historyDir, days)
 	openaisv := NewOpenAiService(openaitk, baseUrl)
 	bot := NewDiscordBot(discordtk, model, initprompt, hm)
 

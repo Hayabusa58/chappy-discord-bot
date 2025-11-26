@@ -114,7 +114,12 @@ func messageCreateHandler(b *DiscordBot, cid string, oai *OpenAiService) func(s 
 			}
 			// メッセージ履歴に追加
 			b.History.AddMessage(cid, "assistant", completion.Choices[0].Message.Content)
-			s.ChannelMessageSend(m.ChannelID, completion.Choices[0].Message.Content)
+			_, err = s.ChannelMessageSend(m.ChannelID, completion.Choices[0].Message.Content)
+			if err != nil {
+				log.Printf("Warning: ChannelMessageSend failed, %s", err)
+				msg := fmt.Sprintf("⚠エラー: メッセージの送信処理中にエラーが発生しました。\ndetail:\n```\n%s```", err)
+				s.ChannelMessageSend(m.ChannelID, msg)
+			}
 			b.CompletionParams.Messages.Value = append(b.CompletionParams.Messages.Value, completion.Choices[0].Message)
 
 		}

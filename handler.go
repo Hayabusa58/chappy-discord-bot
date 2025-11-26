@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/Hayabusa58/chappy-discord-bot/util"
 	"github.com/bwmarrin/discordgo"
 	"github.com/openai/openai-go"
 )
@@ -114,12 +115,19 @@ func messageCreateHandler(b *DiscordBot, cid string, oai *OpenAiService) func(s 
 			}
 			// メッセージ履歴に追加
 			b.History.AddMessage(cid, "assistant", completion.Choices[0].Message.Content)
-			_, err = s.ChannelMessageSend(m.ChannelID, completion.Choices[0].Message.Content)
-			if err != nil {
-				log.Printf("Warning: ChannelMessageSend failed, %s", err)
-				msg := fmt.Sprintf("⚠エラー: メッセージの送信処理中にエラーが発生しました。\ndetail:\n```\n%s```", err)
-				s.ChannelMessageSend(m.ChannelID, msg)
+
+			// Discord の1メッセージあたりの文字数制限に抵触しないよう、1500文字を1チャンクとして分割して送信する
+			n := 1500
+			chunks := util.SplitCharsByN(completion.Choices[0].Message.Content, n)
+			for _, chunk := range chunks {
+				_, err = s.ChannelMessageSend(m.ChannelID, chunk)
+				if err != nil {
+					log.Printf("Warning: ChannelMessageSend failed, %s", err)
+					msg := fmt.Sprintf("⚠エラー: メッセージの送信処理中にエラーが発生しました。\ndetail:\n```\n%s```", err)
+					s.ChannelMessageSend(m.ChannelID, msg)
+				}
 			}
+
 			b.CompletionParams.Messages.Value = append(b.CompletionParams.Messages.Value, completion.Choices[0].Message)
 
 		}

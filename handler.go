@@ -2,10 +2,13 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
+	"regexp"
 	"time"
 
+	"github.com/Hayabusa58/chappy-discord-bot/util"
 	"github.com/bwmarrin/discordgo"
 	"github.com/openai/openai-go"
 )
@@ -39,7 +42,7 @@ func readyHandler(b *DiscordBot, oai *OpenAiService, cid string) func(s *discord
 			completion, err := oai.Client.Chat.Completions.New(context.TODO(), b.CompletionParams)
 			if err != nil {
 				log.Fatalf("Error: An error happend while initalize: %w", err)
-				msg := fmt.Sprintf("⚠エラー: Botの初期化処理中にエラーが発生しました。\ndetail:\n```\n%s```", err)
+				msg := fmt.Sprintf(":warning: エラー: Botの初期化処理中にエラーが発生しました。\ndetail:\n```\n%s```", err)
 				s.ChannelMessageSend(cid, msg)
 				return
 			} else {
@@ -107,14 +110,67 @@ func messageCreateHandler(b *DiscordBot, cid string, oai *OpenAiService) func(s 
 			completion, err := oai.Client.Chat.Completions.New(context.TODO(), b.CompletionParams)
 
 			if err != nil {
-				log.Println("Warning: API error, %w", err)
-				msg := fmt.Sprintf("⚠エラー: メッセージの応答処理中にエラーが発生しました。\ndetail:\n```\n%s```", err)
-				s.ChannelMessageSend(m.ChannelID, msg)
+				var apierr *openai.Error
+				// API Error であればステータスコードに応じたエラーを出す
+				if errors.As(err, &apierr) {
+					log.Println("Warning: API error, %w", err)
+					status := apierr.StatusCode
+					switch status {
+					case 400:
+						s.ChannelMessageSend(m.ChannelID, ":warning: エラー: リクエスト内容が不正です。メッセージ内容を確認してください。")
+					case 401:
+						s.ChannelMessageSend(m.ChannelID, ":warning: エラー: 認証エラーです。APIキーを確認してください。")
+					// 429 の場合はリトライする時間を表示する
+					case 429:
+						re := regexp.MustCompile(`Please retry in ([0-9]+)`)
+						var found []string
+						// Gemini など OpenAI 互換API の場合、apierr.Message が空になることがある
+						if apierr.Message == "" {
+							fmt.Println("apierr.Message is empty")
+							respstr := string(apierr.DumpResponse(true))
+
+							// fmt.Println(respstr)
+							found = re.FindStringSubmatch(respstr)
+
+						} else {
+							found = re.FindStringSubmatch(apierr.Message)
+
+						}
+						if len(found) == 2 {
+							s.ChannelMessageSend(m.ChannelID,
+								fmt.Sprintf(":warning: エラー: APIのレートリミットに達しました。**%s秒後**に再度お試しください。", found[1]),
+							)
+						} else {
+							s.ChannelMessageSend(m.ChannelID, ":warning: エラー: レートリミットに達しました。しばらく待ってから再度お試しください。")
+						}
+					case 500, 502, 503, 504:
+						s.ChannelMessageSend(m.ChannelID, ":warning: エラー: APIサーバで問題が発生しています。時間をおいて再試行してください。")
+					default:
+						s.ChannelMessageSend(m.ChannelID, fmt.Sprintf(":warning: エラー: ステータスコード=%d\n```\n%s```", status, apierr.Message))
+					}
+				} else {
+					log.Println("Warning: Something error, %w", err)
+					msg := fmt.Sprintf(":warning: エラー: メッセージの応答処理中にエラーが発生しました。\ndetail:\n```\n%s```", err)
+					s.ChannelMessageSend(m.ChannelID, msg)
+				}
+
 				return
 			}
 			// メッセージ履歴に追加
 			b.History.AddMessage(cid, "assistant", completion.Choices[0].Message.Content)
-			s.ChannelMessageSend(m.ChannelID, completion.Choices[0].Message.Content)
+
+			// Discord の1メッセージあたりの文字数制限に抵触しないよう、1500文字を1チャンクとして分割して送信する
+			n := 1500
+			chunks := util.SplitCharsByN(completion.Choices[0].Message.Content, n)
+			for _, chunk := range chunks {
+				_, err = s.ChannelMessageSend(m.ChannelID, chunk)
+				if err != nil {
+					log.Printf("Warning: ChannelMessageSend failed, %s", err)
+					msg := fmt.Sprintf(":warning: エラー: メッセージの送信処理中にエラーが発生しました。\ndetail:\n```\n%s```", err)
+					s.ChannelMessageSend(m.ChannelID, msg)
+				}
+			}
+
 			b.CompletionParams.Messages.Value = append(b.CompletionParams.Messages.Value, completion.Choices[0].Message)
 
 		}
@@ -132,7 +188,7 @@ func forgetCommandHandler(b *DiscordBot) func(s *discordgo.Session, i *discordgo
 			b.CompletionParams.Messages.Value = append(b.CompletionParams.Messages.Value, openai.SystemMessage(sysprompt))
 			log.Println("Info: Removing bot history...")
 			if err != nil {
-				msg := fmt.Sprintf("⚠エラー: 記憶消去処理中にエラーが発生しました。\ndetail:\n```\n%s```", err)
+				msg := fmt.Sprintf(":warning: エラー: 記憶消去処理中にエラーが発生しました。\ndetail:\n```\n%s```", err)
 				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,
 					Data: &discordgo.InteractionResponseData{
